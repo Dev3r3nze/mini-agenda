@@ -20,6 +20,8 @@ export default function Home() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [notes, setNotes] = useState<string>("");
 
+  
+
   useEffect(() => {
     initFirebase(firebaseConfig); // Inicializa Firebase
     const unsubscribe = subscribeToAuthChanges((user) => {
