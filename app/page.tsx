@@ -1,5 +1,4 @@
 "use client"
-"use client"
 import React, { useEffect, useState } from "react";
 import { initFirebase, subscribeToAuthChanges, User } from "../lib/firebase";
 import Sidebar from "../components/sidebar"; // Tu componente Sidebar
