@@ -7,13 +7,14 @@ import LoginSignup from "../components/loginSingup"; // Nuevo componente que cre
 import Calendar from "../components/calendar"; // Tu componente Calendar
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAs7g5ufE6GwG50bdZHk8ZMcaEx2z0zXq8",
-  authDomain: "digitalagenda-f0e54.firebaseapp.com",
-  projectId: "digitalagenda-f0e54",
-  storageBucket: "digitalagenda-f0e54.firebasestorage.app",
-  messagingSenderId: "511216144518",
-  appId: "1:511216144518:web:433f9d990d17f24df44107",
-};
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID!
+}
+
 
 export default function Home() {
   const [currentUser, setCurrentUser] = useState<User | null | undefined>(undefined); // undefined = cargando, null = no logueado, User = logueado
