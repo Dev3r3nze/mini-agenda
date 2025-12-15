@@ -97,7 +97,7 @@ export default function WeekView({
                       ))}
                   </div>
                 ) : (
-                  <div className="text-xs text-muted-foreground text-center py-8">
+                  <div className="text-xs text-muted-foreground text-center py-2">
                     No events
                   </div>
                 )}

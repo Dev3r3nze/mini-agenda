@@ -23,7 +23,9 @@ export default function Calendar({
   const [view, setView] = useState<ViewType>("month");
   const [displayDate, setDisplayDate] = useState(selectedDate);
   const [currentUser, setCurrentUser] = useState<any>(null); // tu lógica de usuario
-  const [notes, setNotes] = useState<Record<string, { text: string } | null>>({}); // notas cargadas
+  const [notes, setNotes] = useState<Record<string, { text: string } | null>>(
+    {}
+  ); // notas cargadas
 
   const [weeklyNotes, setWeeklyNotes] = useState<
     Record<string, { text: string } | null>
@@ -40,8 +42,6 @@ export default function Calendar({
     }
     setDisplayDate(newDate);
   };
-
-  
 
   const handleNext = () => {
     const newDate = new Date(displayDate);
@@ -63,7 +63,7 @@ export default function Calendar({
 
   const getStartOfWeek = (date: Date) => {
     const newDate = new Date(date);
-    const day = newDate.getDay(); 
+    const day = newDate.getDay();
     const diff = day === 0 ? -6 : 1 - day;
     newDate.setDate(newDate.getDate() + diff);
     return newDate;
@@ -112,37 +112,36 @@ export default function Calendar({
   // view → al entrar en vista semanal
 
   useEffect(() => {
-  const unsubscribe = onAuthStateChanged(auth, (user) => {
-    setCurrentUser(user);
-  });
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
 
-  return () => unsubscribe();
-}, []);
-  
+    return () => unsubscribe();
+  }, []);
 
   const loadNotesForDates = async (dates: Date[]) => {
-  if (!currentUser) {
-    console.warn("No authenticated user, cannot load notes.");
-    return;
-  }
-
-  const result: Record<string, { text: string } | null> = {};
-
-  for (const day of dates) {
-    const key = formatKey(day);
-    // key = "YYYY-MM-DD"
-
-    try {
-      const note = await loadNoteForDate(key);
-      result[key] = note ? { text: note.text } : null;
-    } catch (e) {
-      console.warn(`Error al cargar la nota del día ${key}`, e);
-      result[key] = null;
+    if (!currentUser) {
+      console.warn("No authenticated user, cannot load notes.");
+      return;
     }
-  }
 
-  setNotes(result); // setNotes viene de tu estado global del calendario
-};
+    const result: Record<string, { text: string } | null> = {};
+
+    for (const day of dates) {
+      const key = formatKey(day);
+      // key = "YYYY-MM-DD"
+
+      try {
+        const note = await loadNoteForDate(key);
+        result[key] = note ? { text: note.text } : null;
+      } catch (e) {
+        console.warn(`Error al cargar la nota del día ${key}`, e);
+        result[key] = null;
+      }
+    }
+
+    setNotes(result); // setNotes viene de tu estado global del calendario
+  };
 
   // Cargar notas cuando cambie la fecha mostrada o el usuario
   useEffect(() => {
@@ -171,12 +170,10 @@ export default function Calendar({
 
     loadNotesForDates(datesToLoad);
   }, [displayDate, view, currentUser]);
-  
 
-  
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between sm:flex-col sm:gap-4">
         <div>
           <h1 className="text-3xl font-light tracking-tight">Mini Agenda</h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -193,55 +190,53 @@ export default function Calendar({
         <ViewSelector view={view} onViewChange={setView} />
         <div>
           <button
-          onClick={handleToday}
-          className="px-4 py-2 w-full rounded-lg bg-accent text-accent-foreground hover:opacity-90 transition-opacity text-sm font-medium"
-        >
-          Today
-        </button>
-        <div className="flex items-center gap-4 mb-6 mt-2">
-        <button
-          onClick={handlePrevious}
-          className="p-2 hover:bg-muted rounded-lg transition-colors"
-          aria-label="Previous"
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+            onClick={handleToday}
+            className="px-4 py-2 w-full rounded-lg bg-accent text-accent-foreground hover:cursor-pointer hover:bg-accent/80 transition-opacity text-sm font-medium"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-        </button>
-        <button
-          onClick={handleNext}
-          className="p-2 hover:bg-muted rounded-lg transition-colors"
-          aria-label="Next"
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </button>
-      </div>
+            Today
+          </button>
+          <div className="flex items-center gap-4 mb-6 mt-2">
+            <button
+              onClick={handlePrevious}
+              className="p-2 hover:bg-muted rounded-lg transition-colors hover:cursor-pointer"
+              aria-label="Previous"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+            </button>
+            <button
+              onClick={handleNext}
+              className="p-2 hover:bg-muted rounded-lg transition-colors hover:cursor-pointer"
+              aria-label="Next"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
-
-      
 
       <div className="transition-all duration-300">
         {view === "year" && (

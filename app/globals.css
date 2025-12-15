@@ -148,6 +148,16 @@
 									   color-stop(0.86, rgb(90, 90, 90)));
 }
 
+/* sm screen custom height */
+@media (min-width: 400px){
+  .sm\:flex-col {
+    flex-direction: column;
+  }
+  .sm\:gap-4{
+    gap: 1rem;
+  }
+}
+
 
 /* md screen custom height */
 @media (min-width: 768px) {
@@ -157,7 +167,15 @@
   .md\:max-h-\[60vh\] {
     max-height: 55vh;
   }
+  .sm\:flex-col {
+    flex-direction: row;
+  }
+  .sm\:gap-4{
+    gap: 0;
+  }
 }
+
+
 
 /* xl screen custom height */
 @media (min-width: 1280px) {

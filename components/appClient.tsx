@@ -10,19 +10,27 @@ import {
   DragCancelEvent,
   pointerWithin,
 } from "@dnd-kit/core";
+
+import Calendar from "./calendar";
+import TasksPanel from "./tasksPanel";
+import Sidebar from "./sidebar";
+
+import LoginSignup from "./loginSingup";
+
 import {
   initFirebase,
-  listTasksForDate,
-  listUnassignedTasks,
   subscribeToAuthChanges,
+  formatKey,
   type User,
 } from "@/lib/firebase";
-import Sidebar from "./sidebar";
-import Calendar from "./calendar";
-import LoginSignup from "./loginSingup";
-import TasksPanel, { Task } from "./tasksPanel";
-import { updateTask } from "@/lib/firebase"; // Asegúrate de que la ruta es correcta
-import { formatKey } from "@/lib/firebase";
+
+import type { Task } from "./tasksPanel";
+
+import {
+  listUnassignedTasks,
+  listTasksForDate,
+  updateTask,
+} from "@/lib/firebase";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
@@ -34,10 +42,14 @@ const firebaseConfig = {
 };
 
 export default function AppClient() {
-   // auth & selection
-  const [currentUser, setCurrentUser] = useState<User | null | undefined>(undefined);
+  // auth & selection
+  const [currentUser, setCurrentUser] = useState<User | null | undefined>(
+    undefined
+  );
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [notes, setNotes] = useState<string>("");
+  const [leftOpen, setLeftOpen] = useState(false);
+  const [rightOpen, setRightOpen] = useState(false);
 
   // tareas: sin asignar (panel izquierdo) y del día (sidebar)
   const [unassignedTasks, setUnassignedTasks] = useState<Task[]>([]);
@@ -62,7 +74,6 @@ export default function AppClient() {
       // ordenar por order
       normalized.sort((a: Task, b: Task) => (a.order ?? 0) - (b.order ?? 0));
       setUnassignedTasks(normalized);
-      console.log("Tareas globales cargadas:", normalized);
     } catch (err) {
       console.error("loadGlobalTasks error:", err);
     }
@@ -82,7 +93,6 @@ export default function AppClient() {
       }));
       normalized.sort((a: Task, b: Task) => (a.order ?? 0) - (b.order ?? 0));
       setDayTasks(normalized);
-      console.log("Tareas del día cargadas:", normalized);
     } catch (err) {
       console.error("loadSidebarTasks error:", err);
     }
@@ -108,15 +118,14 @@ export default function AppClient() {
 
         if (cancelled) return;
 
+        // espera adicional de 1 segundo para evitar parpadeos
+        await new Promise((res) => setTimeout(res, 1000));
+
         // subscribe auth
         unsubscribe = subscribeToAuthChanges((user) => {
           setCurrentUser(user);
         });
 
-        // Espera adicional de 1s
-        await new Promise((res) => setTimeout(res, 1000));
-
-        if (cancelled) return;
         // cargar datos ahora que firebase está listo
         await loadGlobalTasks();
         await loadSidebarTasks();
@@ -209,25 +218,49 @@ export default function AppClient() {
     return <LoginSignup currentUser={currentUser} />;
   }
 
+  // --- JSX: DndContext + DragOverlay ---
   return (
     <div className="flex h-screen bg-background text-foreground">
       <main className="flex-1 flex overflow-hidden">
         <DndContext
           collisionDetection={pointerWithin}
-          onDragStart={(event) => {
-            const task = findTaskById(event.active.id as string);
-            setActiveTask(task ?? null);
-          }}
-          onDragEnd={(event) => {
-            handleDragEnd(event);
-            setActiveTask(null);
-          }}
-          onDragCancel={() => setActiveTask(null)}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
         >
-          <div className="w-full md:w-80 border-r border-border bg-card">
-            <TasksPanel />
+          {/* 🔘 BOTÓN SIDEBAR IZQUIERDO (MÓVIL) */}
+          <button
+            onClick={() => setLeftOpen(!leftOpen)}
+            className="md:hidden fixed bottom-4 left-4 z-50 px-3 py-2 rounded-full bg-primary text-primary-foreground shadow"
+          >
+            🗂
+          </button>
+
+          {/* 🔘 BOTÓN SIDEBAR DERECHO (MÓVIL) */}
+          <button
+            onClick={() => setRightOpen(!rightOpen)}
+            className="md:hidden fixed bottom-4 right-4 z-50 px-3 py-2 rounded-full bg-primary text-primary-foreground shadow"
+          >
+            📝
+          </button>
+
+          {/* Panel izquierdo */}
+          <div
+            className={`
+              fixed inset-y-0 left-0 z-40 w-72 bg-card border-r border-border
+              transform transition-transform duration-300
+              ${leftOpen ? "translate-x-0" : "-translate-x-full"}
+              md:static md:translate-x-0 md:w-80
+            `}
+          >
+            <TasksPanel
+              tasks={unassignedTasks}
+              setTasks={setUnassignedTasks}
+              reload={loadGlobalTasks}
+            />
           </div>
 
+          {/* Calendario */}
           <div className="flex-1 p-6 md:p-8 overflow-auto">
             <Calendar
               selectedDate={selectedDate}
@@ -235,13 +268,25 @@ export default function AppClient() {
             />
           </div>
 
-          <aside className="w-full md:w-80 border-l border-border bg-card">
+          {/* Sidebar derecho */}
+          <aside
+            className={`
+              fixed inset-y-0 right-0 z-40 w-72 bg-card border-l border-border
+              transform transition-transform duration-300
+              ${rightOpen ? "translate-x-0" : "translate-x-full"}
+              md:static md:translate-x-0 md:w-80
+            `}
+          >
             <Sidebar
               selectedDate={selectedDate}
               notes={notes}
               onNotesChange={setNotes}
+              tasks={dayTasks}
+              setTasks={setDayTasks}
+              reload={loadSidebarTasks}
             />
           </aside>
+
           <DragOverlay>
             {activeTask ? (
               <div className="p-2 bg-card border rounded shadow">

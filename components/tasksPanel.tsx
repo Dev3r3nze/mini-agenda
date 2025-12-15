@@ -1,27 +1,16 @@
 // components/TasksPanel.tsx
 "use client";
 
-import { use, useEffect, useState } from "react";
-import { DndContext, closestCenter, DragEndEvent } from "@dnd-kit/core";
+import React, { useState } from "react";
 import {
   SortableContext,
   verticalListSortingStrategy,
   useSortable,
-  arrayMove,
 } from "@dnd-kit/sortable";
-
 import { CSS } from "@dnd-kit/utilities";
-
-import {
-  listUnassignedTasks,
-  createTask,
-  updateTask,
-  deleteCompletedTasks,
-} from "@/lib/firebase"; // ⬅️ asumimos estas funciones ya existentes
-
+import { createTask, updateTask, deleteCompletedTasks } from "@/lib/firebase";
 import { useDroppable } from "@dnd-kit/core";
 
-// ---------- Tipos ----------
 export interface Task {
   id: string;
   text: string;
@@ -29,7 +18,6 @@ export interface Task {
   completed: boolean;
 }
 
-// ---------- Item sortable ----------
 export function SortableTask({
   task,
   onToggle,
@@ -72,15 +60,20 @@ export function SortableTask({
   );
 }
 
-// ---------- Panel principal ----------
-export default function TasksPanel() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [newTitle, setNewTitle] = useState("");
-  const { setNodeRef } = useDroppable({
-    id: "unassigned-list",
-  });
+interface TasksPanelProps {
+  tasks: Task[];
+  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
+  reload: () => Promise<void>;
+}
 
-  // Crear tarea
+export default function TasksPanel({
+  tasks,
+  setTasks,
+  reload,
+}: TasksPanelProps) {
+  const [newTitle, setNewTitle] = useState("");
+  const { setNodeRef } = useDroppable({ id: "unassigned-list" });
+
   async function handleCreateTask() {
     if (!newTitle.trim()) return;
 
@@ -89,35 +82,29 @@ export default function TasksPanel() {
     const task: Task = {
       id: result.id,
       text: newTitle.trim(),
-      order: order,
+      order,
       completed: false,
     };
-    console.log("Tarea creada:", task);
 
     setTasks((prev) => [...prev, task]);
     setNewTitle("");
   }
 
   function toggleCompleted(id: string) {
-    setTasks((prev) => {
-      return prev.map((t) => {
+    setTasks((prev) =>
+      prev.map((t) => {
         if (t.id !== id) return t;
-
         const newCompleted = !t.completed;
-
-        // 🔥 Guardar AQUÍ, con el valor correcto
-        updateTask(id, { completed: newCompleted });
-
+        updateTask(id, { completed: newCompleted }).catch(console.error);
         return { ...t, completed: newCompleted };
-      });
-    });
+      })
+    );
   }
 
   return (
     <aside className="w-72 border-b border-border bg-card p-4 flex flex-col gap-4">
       <h2 className="font-semibold text-lg">Tareas</h2>
 
-      {/* Crear tarea */}
       <div className="flex gap-2">
         <input
           className="flex-1 border rounded px-2 py-1"
@@ -128,13 +115,12 @@ export default function TasksPanel() {
         />
         <button
           onClick={handleCreateTask}
-          className="px-3 py-1 rounded bg-primary text-primary-foreground"
+          className="aspect-square px-3 text-xs text-danger border hover:bg-accent hover:cursor-pointer border-danger rounded hover:bg-danger/10 transition-colors"
         >
           +
         </button>
       </div>
 
-      {/* Lista de tareas SIN FECHA (droppable) */}
       <div
         ref={setNodeRef}
         id="unassigned-list"
@@ -160,14 +146,13 @@ export default function TasksPanel() {
         )}
       </div>
 
-      {/* Eliminar completadas */}
       {tasks.some((t) => t.completed) && (
         <button
           onClick={async () => {
             await deleteCompletedTasks();
-            setTasks((prev) => prev.filter((t) => !t.completed));
+            await reload();
           }}
-          className="px-3 py-1 rounded bg-primary text-primary-foreground"
+          className="mt-2 text-xs text-danger border hover:bg-accent hover:cursor-pointer border-danger rounded px-2 py-1 hover:bg-danger/10 transition-colors"
         >
           Eliminar tareas completadas
         </button>

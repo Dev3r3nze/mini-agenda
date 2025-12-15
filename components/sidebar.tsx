@@ -21,12 +21,18 @@ interface SidebarProps {
   selectedDate: Date;
   notes: string;
   onNotesChange: (notes: string) => void;
+  tasks: Task[];
+  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
+  reload: () => Promise<void>;
 }
 
 export default function Sidebar({
   selectedDate,
   notes,
   onNotesChange,
+  tasks,
+  setTasks,
+  reload,
 }: SidebarProps) {
   const [localNotes, setLocalNotes] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -34,10 +40,10 @@ export default function Sidebar({
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [tasks, setTasks] = useState<Task[]>([]);
   const { setNodeRef } = useDroppable({
     id: "day-tasks-dropzone",
   });
+
 
   useEffect(() => {
     mounted.current = true;
@@ -111,10 +117,8 @@ export default function Sidebar({
       prev.map((t) => {
         if (t.id !== id) return t;
         const newCompleted = !t.completed;
-        // persistir con el valor correcto
         updateTask(id, { completed: newCompleted }).catch((err) => {
           console.error("updateTask error:", err);
-          // opcional: revertir estado si falla
         });
         return { ...t, completed: newCompleted };
       })
@@ -125,6 +129,13 @@ export default function Sidebar({
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setLocalNotes(e.target.value);
   };
+
+  const deleteCompletedTasks = async () => {
+    const completedTaskIds = tasks.filter((t) => t.completed).map((t) => t.id);
+    await Promise.all(
+      completedTaskIds.map((id) => updateTask(id, { dateKey: null }))
+    );
+  }
 
   // guardar en blur
   const handleBlur = async () => {
@@ -195,7 +206,7 @@ export default function Sidebar({
             items={tasks.map((t) => t.id)}
             strategy={verticalListSortingStrategy}
           >
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 select-none">
               {tasks.map((task) => (
                 <SortableTask
                   key={task.id}
@@ -206,6 +217,19 @@ export default function Sidebar({
             </div>
           </SortableContext>
         </div>
+        {/* Botón de borrado de tareas completadas */}
+        {tasks.some((t) => t.completed) && (
+          <button
+            onClick={async () => {
+              await deleteCompletedTasks();
+              setTasks((prev) => prev.filter((t) => !t.completed));
+            }}
+            className="mt-2 text-xs text-danger border hover:bg-accent hover:cursor-pointer border-danger rounded px-2 py-1 hover:bg-danger/10 transition-colors"
+          >
+            Borrar tareas completadas
+          </button>
+        )}
+
       </div>
 
       {/* 📝 NOTAS */}
