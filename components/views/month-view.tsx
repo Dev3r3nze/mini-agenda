@@ -25,8 +25,6 @@ export default function MonthView({ date, selectedDate, onDateSelect, notes }: M
 
    const hasNote = (day: number) => {
     const target = new Date(year, month, day+1).toISOString().split("T")[0];
-    console.log("Checking note for", target, notes);
-    console.log("Notes keys:", Object.keys(notes));
     return notes[target] !== undefined && notes[target] !== null;
   };
 

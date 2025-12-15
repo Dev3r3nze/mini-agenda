@@ -1,6 +1,8 @@
 // lib/firebase.ts
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore, doc, setDoc, getDoc, deleteDoc } from "firebase/firestore";
+import { collection, addDoc, query, where, orderBy, getDocs } from "firebase/firestore";
+
 import {
   getAuth,
   onAuthStateChanged,
@@ -28,6 +30,8 @@ export const firebaseInitialized = new Promise<void>( // Renombrado para mayor c
 // Variables para gestionar el estado del usuario actual y los suscriptores.
 let _currentUser: User | null = null;
 const authStateChangedCallbacks: ((user: User | null) => void)[] = [];
+
+
 
 export function initFirebase(config: any) {
   if (app) return firebaseInitialized; // Si ya está inicializado, devuelve la promesa existente.
@@ -182,15 +186,61 @@ export async function loadNoteForDate(dateKey: string) {
   }
 
   const noteId = makeNoteId(_currentUser.uid, dateKey);
-  console.log("Cargando nota para ID:", noteId, "con UID:", _currentUser.uid);
   const ref = doc(db, "notes", noteId);
 
   const snap = await getDoc(ref);
 
   if (!snap.exists()) {
-    console.log("Nota con ID:", noteId, "no encontrada.");
+    // console.log("Nota con ID:", noteId, "no encontrada.");
     return null;
   }
-  console.log("Nota con ID:", noteId, "encontrada. Datos:", snap.data());
+  // console.log("Nota con ID:", noteId, "encontrada. Datos:", snap.data());
   return snap.data();
+}
+
+// crear tarea sin fecha (global)
+export async function createTask(text: string, order = 0) {
+  if (!db || !_currentUser?.uid) throw new Error("Firebase no listo");
+  const ref = await addDoc(collection(db, "tasks"), {
+    userId: _currentUser.uid,
+    text,
+    completed: false,
+    order,
+    dateKey: null,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  });
+  return { id: ref.id };
+}
+
+// actualizar
+export async function updateTask(taskId: string, patch: Partial<{text:string, completed:boolean, dateKey:string | null, order:number}>) {
+  if (!db || !_currentUser?.uid) throw new Error("Firebase no listo");
+  const ref = doc(db, "tasks", taskId);
+  await setDoc(ref, { ...patch, updatedAt: Date.now() }, { merge: true });
+}
+
+// listar tareas globales (no asignadas)
+export async function listUnassignedTasks() {
+  if (!db || !_currentUser?.uid) throw new Error("Firebase no listo");
+  const q = query(collection(db, "tasks"), where("userId", "==", _currentUser.uid), where("dateKey", "==", null), orderBy("order", "asc"));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+// listar tareas de una fecha
+export async function listTasksForDate(dateKey: string) {
+  if (!db || !_currentUser?.uid) throw new Error("Firebase no listo");
+  const q = query(collection(db, "tasks"), where("userId", "==", _currentUser.uid), where("dateKey", "==", dateKey), orderBy("order", "asc"));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+// borrar tareas completadas
+export async function deleteCompletedTasks() {
+  if (!db || !_currentUser?.uid) throw new Error("Firebase no listo");
+  const q = query(collection(db, "tasks"), where("userId", "==", _currentUser.uid), where("completed", "==", true));
+  const snap = await getDocs(q);
+  const deletePromises = snap.docs.map(d => deleteDoc(doc(db, "tasks", d.id)));
+  await Promise.all(deletePromises);
 }
